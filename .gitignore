@@ -8,6 +8,9 @@
 *.so
 *.dylib
 
+# server location
+exfil_location
+
 # Test binary, built with `go test -c`
 *.test
 
