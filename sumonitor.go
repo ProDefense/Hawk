@@ -10,6 +10,8 @@ import (
 	"time"
 )
 
+var shutdownChan = make(chan struct{})
+
 func watchSUProcesses() {
 	processedPIDs := make(map[int]struct{})
 	for {
@@ -22,16 +24,18 @@ func watchSUProcesses() {
 				time.Sleep(5 * time.Second)
 				continue
 			}
-
 			for _, pid := range suPIDs {
-				go traceSUProcess(pid)
-				processedPIDs[pid] = struct{}{}
+				if _, processed := processedPIDs[pid]; !processed {
+					go traceSUProcess(pid)
+					processedPIDs[pid] = struct{}{}
+				}
 			}
 
 			time.Sleep(1 * time.Second / 2)
 		}
 	}
 }
+
 func findSUProcesses() ([]int, error) {
 	var suPIDs []int
 	dir, err := os.Open("/proc")
@@ -55,15 +59,17 @@ func findSUProcesses() ([]int, error) {
 
 	return suPIDs, nil
 }
+
 func isSUProcess(pid int) bool {
-	cmdline, _ := ioutil.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
+	cmdline, err := ioutil.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
+	if err != nil {
+		return false
+	}
 	return regexp.MustCompile(`su`).MatchString(strings.ReplaceAll(string(cmdline), "\x00", " "))
 }
 
 func traceSUProcess(pid int) {
-	// Add your logic to trace and monitor the su process as needed
-	fmt.Printf("Tracing su process with PID: %d\n", pid)
-	// ...
+	fmt.Printf("Tracing pid: %d\n", pid)
 }
 
 func main() {
