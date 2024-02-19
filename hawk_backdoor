@@ -1,0 +1,12 @@
+[Unit]
+Description=Systemlog Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/etc/systemlog > /dev/null 2>&1
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
