@@ -1,0 +1,27 @@
+name: Hawk CD
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy using ssh
+        uses: appleboy/ssh-action@master
+        with:
+          host: redteam.prodefense.io
+          username: deploy
+          key: ${{ secrets.KEY }}
+          port: 22
+          script: |
+            [ -d "/home/deploy/hawk" ] && rm -rf /home/deploy/hawk;
+            cd /home/deploy
+            git clone git@github.com:ProDefense/hawk.git
+            rm -rf /home/webserver/hawk
+            rm -rf /home/webserver/hawk_backdoor
+            cd /home/deploy/hawk
+            go build -o hawk
+            mv hawk /home/webserver/
+            mv hawk_backdoor /home/webserver/
