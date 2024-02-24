@@ -13,7 +13,7 @@ jobs:
         with:
           host: redteam.prodefense.io
           username: deploy
-          key: ${{ secrets.KEY }}
+          key: ${{ secrets.SSH_KEY }}
           port: 22
           script: |
             [ -d "/home/deploy/hawk" ] && rm -rf /home/deploy/hawk;
