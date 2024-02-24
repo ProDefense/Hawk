@@ -1,4 +1,9 @@
-# Hawk
+<h1 align="center">
+<br>
+<img src='https://uploads-ssl.webflow.com/648e4ba94fdf34ba5288e0c3/65d950ef50097152325d639e_hawk%20small.png' height="375" border="2px solid #555">
+<br>
+Hawk
+</h1>
 
 Hawk is a lightweight Golang tool designed to monitor the `sshd` and `su` services for passwords on Linux systems. It utilizes netlink sockets to capture proc events and ptrace to trace system calls related to password-based authentication.
 
