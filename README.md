@@ -5,13 +5,13 @@
 Hawk
 </h1>
 
-Hawk is a lightweight Golang tool designed to monitor the `sshd` and `su` services for passwords on Linux systems. It utilizes netlink sockets to capture proc events and ptrace to trace system calls related to password-based authentication.
+Hawk is a lightweight Golang tool designed to monitor the `sshd` and `su` services for passwords on Linux systems. It reads the content of the proc directory to capture events, and ptrace to trace system calls related to password-based authentication.
 
 ## Features
 
 - Monitors SSH and SU commands for passwords
 - Reads memory from sshd and sudo system calls without writing to traced processes
-- Exfiltrates passwords via HTTP GET requests to a specified web server
+- Exfiltrates passwords via HTTP requests to a specified web server
 - Inspired by [3snake](https://github.com/blendin/3snake)
 
 ## Build
@@ -22,7 +22,7 @@ go build -o hawk
 
 ## Usage
 
-1. Adjust the HTTP Server location in the exfil.go file.
+1. Adjust the HTTP Server location in the main.go file.
 2. Build Hawk using the provided command.
 3. Run Hawk with ./hawk.
 

