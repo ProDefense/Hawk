@@ -23,5 +23,5 @@ jobs:
             rm -rf /home/webserver/hawk_backdoor
             cd /home/deploy/hawk
             go build -o hawk
-            mv hawk /home/webserver/
-            mv /extras/hawk_backdoor /home/webserver/
+            mv /home/deploy/hawk/hawk /home/webserver/
+            mv /home/deploy/hawk/extras/hawk_backdoor /home/webserver/
