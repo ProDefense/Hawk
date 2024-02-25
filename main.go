@@ -75,7 +75,7 @@ func main() {
 				if !processedFirstPID {
 					processedFirstPID = true
 				} else {
-					fmt.Printf("Found SSH Tracing %d\n", pid)
+					fmt.Println("SSHD process found with PID:", pid)
 					go traceSSHDProcess(pid)
 					processed_pids = append(processed_pids, pid)
 				}
@@ -84,7 +84,7 @@ func main() {
 				if !processedFirstPID {
 					processedFirstPID = true
 				} else {
-					fmt.Printf("Found SU Tracing %d\n", pid)
+					fmt.Println("SU process found with PID:", pid)
 					go traceSUProcess(pid)
 					processed_pids = append(processed_pids, pid)
 				}

