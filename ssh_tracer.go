@@ -35,7 +35,7 @@ func traceSSHDProcess(pid int) {
 			var regs syscall.PtraceRegs
 			err := syscall.PtraceGetRegs(pid, &regs)
 			if err != nil {
-				fmt.Println("PtraceGetRegs:", ptrace_err)
+				fmt.Println("PtraceGetRegs:", err)
 				syscall.PtraceDetach(pid)
 				return
 			}
