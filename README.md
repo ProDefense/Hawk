@@ -17,7 +17,7 @@ Hawk is a lightweight Golang tool designed to monitor the `sshd` and `su` servic
 ## Build
 
 ```bash
-go build -o hawk
+GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -o hawk
 ```
 
 ## Usage
