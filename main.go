@@ -92,7 +92,7 @@ func main() {
 
 			processedPIDsMutex.Unlock()
 		}
-		time.Sleep(1 * time.Second)
+		time.Sleep(250 * time.Millisecond)
 	}
 }
 
