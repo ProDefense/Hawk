@@ -3,12 +3,15 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"runtime"
 	"strings"
 	"syscall"
 	"unicode"
 )
 
 func traceSUProcess(pid int) {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
 	err := syscall.PtraceAttach(pid)
 	if err != nil {
 		return
