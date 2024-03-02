@@ -94,7 +94,16 @@ func main() {
 				} else {
 					//fmt.Println("SU process found with PID:", pid)
 					go traceSUProcess(pid)
-					processed_pids = append(processed_pids, pid)
+					processedPids = append(processedPids, pid)
+				}
+			}
+			if isSUDOPid(pid) && (!processedFirstPID || !contains(processedPids, pid)) {
+				if !processedFirstPID {
+					processedFirstPID = true
+				} else {
+					//fmt.Println("SUDO process found with PID:", pid)
+					go traceSUDOProcess(pid)
+					processedPids = append(processedPids, pid)
 				}
 			}
 
