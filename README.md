@@ -5,13 +5,13 @@
 Hawk
 </h1>
 
-Hawk is a lightweight Golang tool designed to monitor the `sshd` and `su` services for passwords on Linux systems. It reads the content of the proc directory to capture events, and ptrace to trace system calls related to password-based authentication.
+Hawk is a lightweight Golang tool designed to monitor the `sshd`, `sudo` and `su` services for passwords on Linux systems. It reads the content of the proc directory to capture events, and ptrace to trace syscalls related to password-based authentication.
 
 ## Features
 
-- Monitors SSH and SU commands for passwords
-- Reads memory from sshd and sudo system calls without writing to traced processes
-- Exfiltrates passwords via HTTP requests to a specified web server
+- Monitors SSH, SUDO and SU commands for passwords
+- Reads memory from sshd, sudo and sudo syscalls without writing to traced processes
+- Exfiltrates passwords via HTTP/S requests to a specified web server
 - Inspired by [3snake](https://github.com/blendin/3snake)
 
 ## Build
